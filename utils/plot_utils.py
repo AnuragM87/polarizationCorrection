@@ -34,7 +34,8 @@ def polarization_ellipse_animation(E, filename="ellipse.gif"):
 
     line, = ax.plot([], [], lw=2)
 
-    t = np.linspace(0, 2*np.pi, 300)
+    # fewer frames -> faster generation while keeping smoothness
+    t = np.linspace(0, 2*np.pi, 100)
 
     def animate(i):
         phi = t[i]
@@ -43,8 +44,109 @@ def polarization_ellipse_animation(E, filename="ellipse.gif"):
         line.set_data([0, x], [0, y])
         return line,
 
-    anim = FuncAnimation(fig, animate, frames=len(t), interval=20)
+    anim = FuncAnimation(fig, animate, frames=len(t), interval=30)
     anim.save(filename, writer="pillow")
     plt.close()
     return filename
+
+
+def polarization_ellipse_html(E, width=400, height=400):
+        """
+        Return an HTML string that renders a fast client-side animation
+        of the polarization ellipse using an HTML5 canvas and JavaScript.
+        """
+        Ex, Ey = E[0], E[1]
+
+        ex_re = float(np.real(Ex))
+        ex_im = float(np.imag(Ex))
+        ey_re = float(np.real(Ey))
+        ey_im = float(np.imag(Ey))
+
+        # Create HTML with embedded JS that computes the real field components
+        html = f"""
+        <div>
+            <canvas id="polCanvas" width="{width}" height="{height}" style="border:1px solid #ddd"></canvas>
+        </div>
+        <script>
+        (function() {{
+            const ex_re = {ex_re};
+            const ex_im = {ex_im};
+            const ey_re = {ey_re};
+            const ey_im = {ey_im};
+
+            const canvas = document.getElementById('polCanvas');
+            const ctx = canvas.getContext('2d');
+            const W = canvas.width;
+            const H = canvas.height;
+            const cx = W/2;
+            const cy = H/2;
+            const margin = 20;
+            const maxR = Math.max(Math.hypot(ex_re, ex_im), Math.hypot(ey_re, ey_im), 1e-6);
+            const scale = (Math.min(W, H) / 2 - margin) / (1.0 * maxR);
+
+            const N = 200;
+            const pts = new Array(N);
+            for (let i=0;i<N;i++){{
+                const phi = 2*Math.PI * i / N;
+                const x = ex_re * Math.cos(phi) - ex_im * Math.sin(phi);
+                const y = ey_re * Math.cos(phi) - ey_im * Math.sin(phi);
+                pts[i] = [x, y];
+            }}
+
+            function draw(){{
+                ctx.clearRect(0,0,W,H);
+
+                // axes
+                ctx.strokeStyle = '#ddd';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(0, cy);
+                ctx.lineTo(W, cy);
+                ctx.moveTo(cx, 0);
+                ctx.lineTo(cx, H);
+                ctx.stroke();
+
+                // ellipse trace
+                ctx.strokeStyle = '#0074D9';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                for (let i=0;i<N;i++){{
+                    const x = cx + pts[i][0] * scale;
+                    const y = cy - pts[i][1] * scale;
+                    if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+                }}
+                ctx.closePath();
+                ctx.stroke();
+
+                // rotating point (advance by time)
+                const t = Date.now() / 60.0;
+                const phi = (t % (2*Math.PI));
+                const rx = ex_re * Math.cos(phi) - ex_im * Math.sin(phi);
+                const ry = ey_re * Math.cos(phi) - ey_im * Math.sin(phi);
+                const px = cx + rx * scale;
+                const py = cy - ry * scale;
+
+                // radial vector
+                ctx.strokeStyle = '#FF4136';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(cx, cy);
+                ctx.lineTo(px, py);
+                ctx.stroke();
+
+                // rotating dot
+                ctx.fillStyle = '#FF4136';
+                ctx.beginPath();
+                ctx.arc(px, py, 5, 0, 2*Math.PI);
+                ctx.fill();
+
+                requestAnimationFrame(draw);
+            }}
+
+            draw();
+        }})();
+        </script>
+        """
+
+        return html
 

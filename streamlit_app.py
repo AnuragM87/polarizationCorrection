@@ -4,7 +4,8 @@ import numpy as np
 from hardware.states import get_polarization_vector
 from hardware.hwp import apply_hwp
 from hardware.qwp import apply_qwp
-from utils.plot_utils import polarization_ellipse_animation
+from utils.plot_utils import polarization_ellipse_animation, polarization_ellipse_html
+import streamlit.components.v1 as components
 
 
 st.set_page_config(layout="wide")
@@ -122,8 +123,16 @@ else:
 # -----------------------------------------------------
 st.subheader("Polarization Ellipse Animation")
 
+# Let user choose animation mode. Default to client-side HTML canvas (fast).
+anim_mode = st.selectbox("Animation type", ["HTML Canvas (fast)", "GIF (server-side)"])
+
 try:
-    ell_file = polarization_ellipse_animation(E, "ellipse.gif")
-    st.image("ellipse.gif", caption="Polarization Ellipse")
+    if anim_mode == "HTML Canvas (fast)":
+        html = polarization_ellipse_html(E, width=420, height=420)
+        components.html(html, height=460)
+    else:
+        # fallback: generate server-side GIF (may be slow)
+        ell_file = polarization_ellipse_animation(E, "ellipse.gif")
+        st.image(ell_file, caption="Polarization Ellipse")
 except Exception as e:
     st.error(f"Ellipse generation error: {e}")
