@@ -18,3 +18,33 @@ def plot_poincare(S_in, S_out, filename="poincare.png"):
     plt.savefig(filename)
     plt.close()
     return filename
+
+def polarization_ellipse_animation(E, filename="ellipse.gif"):
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from matplotlib.animation import FuncAnimation
+
+    Ex, Ey = E[0], E[1]
+
+    fig, ax = plt.subplots(figsize=(4,4))
+    ax.set_xlim(-1, 1)
+    ax.set_ylim(-1, 1)
+    ax.set_xlabel("Ex")
+    ax.set_ylabel("Ey")
+
+    line, = ax.plot([], [], lw=2)
+
+    t = np.linspace(0, 2*np.pi, 300)
+
+    def animate(i):
+        phi = t[i]
+        x = np.real(Ex * np.exp(1j * phi))
+        y = np.real(Ey * np.exp(1j * phi))
+        line.set_data([0, x], [0, y])
+        return line,
+
+    anim = FuncAnimation(fig, animate, frames=len(t), interval=20)
+    anim.save(filename, writer="pillow")
+    plt.close()
+    return filename
+
